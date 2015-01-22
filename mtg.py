@@ -151,7 +151,7 @@ def getPrice(setID, card):
             if x[u'set_id'] == setID.upper():
                 med = float(x['price'].get('median')) / 100
                 price = '{:0,.2f}'.format(med)
-    print card[u'name']+' '+price
+    #print card[u'name']+' '+price
     return price
 
 def getCard(name):
@@ -163,6 +163,38 @@ def getCard(name):
     req = requests.get(url)
     card = req.json()
     return card
+
+def createData(setID, cardCount, updateType):
+    # deckbrew.com is the main data source, providing set AND price information.
+    # This API limits returns to 100 items per page.  Use the cardCount (set size)
+    # ... to determine the number of pages needed to fully display the set.
+    # ... Page starts at 0.
+    numPages = int(math.ceil(float(cardCount) / 100))
+    # Now, update the Cards, Prices or Both, depending on user selection.
+    cardList = list()
+    for i in range(0, numPages):
+        url = "https://api.deckbrew.com/mtg/cards?set=" + setID + "&page=" + str(i)
+        req = requests.get(url)
+        data = req.json()
+        for i in range(0, len(data)):
+            card = data[i]
+            # Get the name of the card.
+            name = card['name']
+            #print name
+            if updateType == 'CARDS':
+                num, rar, color, supertype, ctype, subtype = getCardInfo(setID, card)
+                cardList.append( num+'|'+name+'|'+rar+'|'+color+'|'+supertype+ctype+subtype )
+            elif updateType == 'PRICES':
+                price = getPrice(setID, card)
+                cardList.append( name+'|$%s' %price )
+            elif updateType == 'BOTH':
+                num, rar, color, supertype, ctype, subtype = getCardInfo(setID, card)
+                price = getPrice(setID, card)
+                cardList.append( num+'|'+name+'|'+rar+'|'+color+'|'+supertype+ctype+subtype+'|$%s' %price )
+            else:
+                return "ERROR: Something very bad has happened."
+    return [x.encode('UTF8') for x in cardList]
+
 
 def getCardCount(setID):
     # mtgapi.com provides the set size information.
@@ -184,39 +216,15 @@ def parseStuff():
 ### Main ###
 def main():
     # User provides the set to act upon.  Must be in three-digit code format.
+    # ... User declares create type.  Either just the cards, or with prices.
     args = parseStuff()
     setID = args.setID.upper()
     updateType = args.updateType.upper()
-    # deckbrew.com does not provide set size information.
-    # ... Obtain from an alternate source.
+    # Get set size.
     cardCount = getCardCount(setID)
-    # deckbrew.com is the main data source, providing set AND price information.
-    # This API limits returns to 100 items per page.  Use the cardCount (set size)
-    # ... to determine the number of pages needed to fully display the set.
-    # ... Page starts at 0.
-    numPages = int(math.ceil(float(cardCount) / 100))
-    # Now, update the Cards, Prices or Both, depending on user selection.
-    for i in range(0, numPages):
-        url = "https://api.deckbrew.com/mtg/cards?set=" + setID + "&page=" + str(i)
-        req = requests.get(url)
-        data = req.json()
-        for i in range(0, len(data)):
-            card = data[i]
-            # Get the name of the card.
-            name = card['name']
-            #print name
-            if updateType == 'CARDS':
-                num, rar, color, supertype, ctype, subtype = getCardInfo(setID, card)
-                print num+'|'+name+'|'+rar+'|'+color+'|'+supertype+ctype+subtype
-            elif updateType == 'PRICES':
-                price = getPrice(setID, card)
-                print name+'|$%s' %price
-            elif updateType == 'BOTH':
-                num, rar, color, supertype, ctype, subtype = getCardInfo(setID, card)
-                price = getPrice(setID, card)
-                print num+'|'+name+'|'+rar+'|'+color+'|'+supertype+ctype+subtype+'|$%s' %price
-            else:
-                print "ERROR: Something very bad as happened."
+
+    # Create data.
+    createData(setID, cardCount, updateType)
 
 if __name__ == '__main__':
     main()
