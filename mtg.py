@@ -9,30 +9,30 @@ import re
 def getColor(card, ctype):
     # Get the color identity of the card.
     if u'colors' in card:
-        colorArray = card[u'colors']
-        numColors = len(colorArray)
+        numColors = len(card[u'colors'])
         if numColors > 1:
             color = ''
-            for i in colorArray:
+            for i in card[u'colors']:
                 if i == "blue":
                     i = "U"
                 color += i[0].capitalize()+'/'
             color = color[:-1]
         else:
-            color = colorArray[0].capitalize()
+            color = card[u'colors'][0].capitalize()
     # Special Case: Artifacts are colorless, their "color" is Artifact.
     elif u'Artifact' in ctype:
         color = 'Artifact'
     # Special Case: Lands are colorless, their "color" is Land.
     elif ctype == 'Land':
         color = ctype
+    # Special Case: Some cards are simply colorless, i.e. Eldrazi and Ugin.
     else:
-        print "ERROR: color not identifiable."
+        color = ''
     return color
 
 def getSupertype(card):
     if u'supertypes' in card:
-        supertype = card[u'supertypes'][0].capitalize()
+        supertype = card[u'supertypes'][0].capitalize()+' '
     else:
         supertype = ''
     return supertype
@@ -207,14 +207,14 @@ def main():
             #print name
             if updateType == 'CARDS':
                 num, rar, color, supertype, ctype, subtype = getCardInfo(setID, card)
-                print num+','+name+','+rar+','+color+','+supertype+ctype+subtype
+                print num+'|'+name+'|'+rar+'|'+color+'|'+supertype+ctype+subtype
             elif updateType == 'PRICES':
                 price = getPrice(setID, card)
-                print name+',$%s' %price
+                print name+'|$%s' %price
             elif updateType == 'BOTH':
                 num, rar, color, supertype, ctype, subtype = getCardInfo(setID, card)
                 price = getPrice(setID, card)
-                print num+','+name+','+rar+','+color+','+supertype+ctype+subtype+',$%s' %price
+                print num+'|'+name+'|'+rar+'|'+color+'|'+supertype+ctype+subtype+'|$%s' %price
             else:
                 print "ERROR: Something very bad as happened."
 
