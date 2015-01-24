@@ -3,10 +3,11 @@ import requests
 import argparse
 import math
 import re
-
+import logging
 
 ### Functions ###
 def getColor(card, ctype):
+    logging.info('Getting the Color of the card.')
     # Get the color identity of the card.
     if u'colors' in card:
         numColors = len(card[u'colors'])
@@ -31,6 +32,7 @@ def getColor(card, ctype):
     return color
 
 def getSupertype(card):
+    logging.info('Getting the Supertype of the card.')
     if u'supertypes' in card:
         supertype = card[u'supertypes'][0].capitalize()+' '
     else:
@@ -38,6 +40,7 @@ def getSupertype(card):
     return supertype
 
 def getType(card):
+    logging.info('Getting the Type of the card.')
     # Get the Type of the card.  This is only really needed for
     # Artifact Creatures and Enchantment Creatures.
     typeArray = [x.capitalize() for x in card[u'types']]
@@ -52,6 +55,7 @@ def getType(card):
     return ctype
 
 def orderTypeArray(array):
+    logging.info('Setting the proper Type order.')
     art = enc = cre = 'TEMP'
     for i in array:
         if i == 'Artifact':
@@ -67,6 +71,7 @@ def orderTypeArray(array):
     return orderedArray[0]+' '+orderedArray[1]
 
 def getSubtype(card):
+    logging.info('Getting the Subtype of the card.')
     subtypeArray = [x.capitalize() for x in card[u'subtypes']]
     #print subtypeArray
     arrayLen = len(subtypeArray)
@@ -80,6 +85,7 @@ def getSubtype(card):
     return subtype
 
 def orderSubtypeArray(array):
+    logging.info('Setting the proper Subtype order.')
     highRaceArray = ['Plant', 'Zombie']
     raceArray = ['Angel', 'Ape', 'Bat', 'Bird', 'Crocodile', 'Demon', 'Efreet', \
             'Elemental', 'Elk', 'Elephant', 'Elemental', 'Goblin', \
@@ -119,6 +125,7 @@ def orderSubtypeArray(array):
     return " - %s" %orderedArray[0]+' %s' %orderedArray[1]
 
 def getCardInfo(setID, card):
+    logging.info('Fetching the card data.')
     # For each card in the set, get the Collector Number, Name,
     # ... Rarity, Color and Type.
     # Get the card Type.
@@ -140,6 +147,7 @@ def getCardInfo(setID, card):
             return num, rar, color, supertype, ctype, subtype
 
 def getPrice(setID, card):
+    logging.info('Fetching the card price.')
     # This function provides price information, returning the
     # ... current median price.
     # It is a separate function so it can be called independently.
@@ -155,6 +163,7 @@ def getPrice(setID, card):
     return price
 
 def getCard(name):
+    logging.info('Getting the individual card data.')
     # Get the card object from the name of the card.
     name = name.replace(' ', '-')
     name = name.replace("'", '')
@@ -175,24 +184,34 @@ def createData(setID, cardCount, updateType):
     for i in range(0, numPages):
         url = "https://api.deckbrew.com/mtg/cards?set=" + setID + "&page=" + str(i)
         req = requests.get(url)
+        logging.info('Getting data from page %s' %i)
         data = req.json()
         for i in range(0, len(data)):
             card = data[i]
             # Get the name of the card.
             name = card['name']
+            logging.info('CARD NAME: '+name)
             #print name
             if updateType == 'CARDS':
+                logging.info('Starting the update of the '+updateType+'.')
                 num, rar, color, supertype, ctype, subtype = getCardInfo(setID, card)
                 cardList.append( num+'|'+name+'|'+rar+'|'+color+'|'+supertype+ctype+subtype )
+                logging.info('Finished updating the '+updateType+'.')
             elif updateType == 'PRICES':
+                logging.info('Starting the update of the '+updateType+'.')
                 price = getPrice(setID, card)
                 cardList.append( name+'|$%s' %price )
+                logging.info('Finished updating the '+updateType+'.')
             elif updateType == 'BOTH':
+                logging.info('Starting the FULL update.')
                 num, rar, color, supertype, ctype, subtype = getCardInfo(setID, card)
                 price = getPrice(setID, card)
                 cardList.append( num+'|'+name+'|'+rar+'|'+color+'|'+supertype+ctype+subtype+'|$%s' %price )
+                logging.info('Finished the FULL update.')
             else:
+                logging.warning('ERROR: Something very bad has happened.')
                 return "ERROR: Something very bad has happened."
+    logging.info('Returning the dataset.')
     return [x.encode('UTF8') for x in cardList]
 
 
@@ -215,16 +234,24 @@ def parseStuff():
 
 ### Main ###
 def main():
+    # Set logging level.
+    logging.basicConfig(filename='mtg.log', level=logging.INFO, format='%(levelname)s:%(message)s')
+    logging.info('Initialzing parameters...')
     # User provides the set to act upon.  Must be in three-digit code format.
-    # ... User declares create type.  Either just the cards, or with prices.
+    # ... User declares update type, choosing just the cards, just the prices,
+    # ... or both.
     args = parseStuff()
     setID = args.setID.upper()
     updateType = args.updateType.upper()
+    logging.info('Updating '+updateType)
     # Get set size.
     cardCount = getCardCount(setID)
 
     # Create data.
+    logging.info('Creating dataset.')
     createData(setID, cardCount, updateType)
+
+    logging.info('Complete.')
 
 if __name__ == '__main__':
     main()
