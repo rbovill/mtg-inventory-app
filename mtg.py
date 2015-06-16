@@ -3,8 +3,8 @@
 import requests
 import argparse
 import math
-import re
 import logging
+
 
 ### Functions ###
 def getColor(card, ctype):
@@ -32,6 +32,7 @@ def getColor(card, ctype):
         color = 'Colorless'
     return color
 
+
 def getSupertype(card):
     logging.info('Getting the Supertype of the card.')
     if card[u'supertypes'] == None:
@@ -39,6 +40,7 @@ def getSupertype(card):
     else:
         supertype = card[u'supertypes'][0].capitalize()+' '
     return supertype
+
 
 def getType(card):
     logging.info('Getting the Type of the card.')
@@ -48,6 +50,7 @@ def getType(card):
     for i in typeArray:
         ctype += i+' '
     return ctype.rstrip()
+
 
 def getSubtype(card):
     logging.info('Getting the Subtype of the card.')
@@ -62,7 +65,8 @@ def getSubtype(card):
         subtype = ' '+u'—'+' '+subtype.rstrip()
     return subtype
 
-def getCardInfo(setID, card):
+
+def getCardInfo(card):
     logging.info('Fetching the card data.')
     # For each card in the set, get the Collector Number, Name,
     # ... Rarity, Color and Type.
@@ -80,6 +84,7 @@ def getCardInfo(setID, card):
     rar = card['rarity'][0].upper()
     return num, rar, color, supertype, ctype, subtype
 
+
 def getPrice(setID, card):
     logging.info('Fetching the card price.')
     # This function provides price information, returning the
@@ -96,11 +101,12 @@ def getPrice(setID, card):
     #print card[u'name']+' '+price
     return price
 
+
 def createData(setID, cardCount, updateType):
-    # deckbrew.com is the main data source, providing set AND price information.
-    # This API limits returns to 100 items per page.  Use the cardCount (set size)
+    # mtgapi.com is the main data source, providing set AND price information.
+    # This API limits returns to 20 items per page. Use the cardCount (set size)
     # ... to determine the number of pages needed to fully display the set.
-    # ... Page starts at 0.
+    # ... Page starts at 1.
     numPages = int(math.ceil(float(cardCount) / 20))
     print numPages
     # Now, update the Cards, Prices or Both, depending on user selection.
@@ -108,7 +114,7 @@ def createData(setID, cardCount, updateType):
     for i in range(1, numPages+1):
         url = "http://api.mtgapi.com/v2/cards?set=" + setID + "&page=" + str(i)
         req = requests.get(url)
-        logging.info('Getting data from page %s' %i)
+        logging.info('Getting data from page '+str(i))
         data = req.json()
         for i in range(0, len(data["cards"])):
             card = data["cards"][i]
@@ -118,19 +124,21 @@ def createData(setID, cardCount, updateType):
             #print name
             if updateType == 'CARDS':
                 logging.info('Starting the update of the '+updateType+'.')
-                num, rar, color, supertype, ctype, subtype = getCardInfo(setID, card)
-                cardList.append( num+'|'+name+'|'+rar+'|'+color+'|'+supertype+ctype+subtype )
+                num, rar, color, supertype, ctype, subtype = getCardInfo(card)
+                cardList.append(num+'|'+name+'|'+rar+'|'+color+'|'
+                                +supertype+ctype+subtype)
                 logging.info('Finished updating the '+updateType+'.')
             elif updateType == 'PRICES':
                 logging.info('Starting the update of the '+updateType+'.')
                 price = getPrice(setID, card)
-                cardList.append( name+'|$%s' %price )
+                cardList.append(name+'|$%s' %price)
                 logging.info('Finished updating the '+updateType+'.')
             elif updateType == 'BOTH':
                 logging.info('Starting the FULL update.')
-                num, rar, color, supertype, ctype, subtype = getCardInfo(setID, card)
+                num, rar, color, supertype, ctype, subtype = getCardInfo(card)
                 price = getPrice(setID, card)
-                cardList.append( num+'|'+name+'|'+rar+'|'+color+'|'+supertype+ctype+subtype+'|$%s' %price )
+                cardList.append(num+'|'+name+'|'+rar+'|'+color+'|'
+                                +supertype+ctype+subtype+'|$%s' %price)
                 logging.info('Finished the FULL update.')
             else:
                 logging.warning('ERROR: Something very bad has happened.')
@@ -143,27 +151,35 @@ def createData(setID, cardCount, updateType):
     f.close()
     return [x.encode('UTF8') for x in cardList]
 
+
 def getCardCount(setID):
     # mtgapi.com provides the set size information.
     mtgapiURL = "http://api.mtgapi.com/v2/sets?code=" + setID
     cardCount = requests.get(mtgapiURL).json()[u'sets'][0][u'cardCount']
     return cardCount
 
+
 def parseStuff():
-    parser = argparse.ArgumentParser(description='Create or update MTG card inventories.')
-    parser.add_argument('-s', '--set', metavar='SET', dest='setID', required=True,
-                        help='''REQUIRED: Which MtG SET do you want to update?
-                          Please provide the unique, three-digit identifier.''')
-    parser.add_argument('-u', '--update', metavar='UPDATE', dest='updateType',
-                        choices=['cards', 'prices', 'both'], default='prices',
-                        help='Do you want to update the CARDS, PRICES or BOTH?')
+    parser = argparse.ArgumentParser(
+        description='Create or update MTG card inventories.')
+    parser.add_argument(
+        '-s', '--set', metavar='SET', dest='setID', required=True,
+        help='''REQUIRED: Which MtG SET do you want to update?
+        Please provide the unique, three-digit identifier.''')
+    parser.add_argument(
+        '-u', '--update', metavar='UPDATE', dest='updateType',
+        choices=['cards', 'prices', 'both'], default='prices',
+        help='Do you want to update the CARDS, PRICES or BOTH?')
     args = parser.parse_args()
     return args
+
 
 ### Main ###
 def main():
     # Set logging level.
-    logging.basicConfig(filename='mtg.log', level=logging.INFO, format='%(levelname)s:%(message)s')
+    logging.basicConfig(
+        filename='mtg.log',
+        level=logging.INFO, format='%(levelname)s:%(message)s')
     logging.info('Initialzing parameters...')
     # User provides the set to act upon.  Must be in three-digit code format.
     # ... User declares update type, choosing just the cards, just the prices,
@@ -175,7 +191,8 @@ def main():
     cardCount = getCardCount(setID)
 
     # Create data.
-    logging.info('Creating dataset for '+setID+'. There are '+str(cardCount)+' cards in the set.')
+    logging.info('Creating dataset for '+setID+'. There are '
+                 +str(cardCount)+' cards in the set.')
     logging.info('Updating '+updateType+'.')
     createData(setID, cardCount, updateType)
 
