@@ -96,17 +96,6 @@ def getPrice(setID, card):
     #print card[u'name']+' '+price
     return price
 
-def getCard(name):
-    logging.info('Getting the individual card data.')
-    # Get the card object from the name of the card.
-    name = name.replace(' ', '-')
-    name = name.replace("'", '')
-    name = re.sub('[!@#$%^&*()[\]{};:,./<>?\\|`\'\"~=_+]', "", name.lower())
-    url = "https://api.deckbrew.com/mtg/cards/"+name
-    req = requests.get(url)
-    card = req.json()
-    return card
-
 def createData(setID, cardCount, updateType):
     # deckbrew.com is the main data source, providing set AND price information.
     # This API limits returns to 100 items per page.  Use the cardCount (set size)
