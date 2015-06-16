@@ -8,8 +8,8 @@ import logging
 
 ### Functions ###
 def getColor(card, ctype):
+    """Get the color identity of the card."""
     logging.info('Getting the Color of the card.')
-    # Get the color identity of the card.
     if card[u'colors'] != None:
         numColors = len(card[u'colors'])
         if numColors > 1:
@@ -34,6 +34,7 @@ def getColor(card, ctype):
 
 
 def getSupertype(card):
+    """Get the card supertype."""
     logging.info('Getting the Supertype of the card.')
     if card[u'supertypes'] == None:
         supertype = ''
@@ -43,8 +44,8 @@ def getSupertype(card):
 
 
 def getType(card):
+    """Get the Type of the card."""
     logging.info('Getting the Type of the card.')
-    # Get the Type of the card.
     typeArray = [x.capitalize() for x in card[u'types']]
     ctype = ""
     for i in typeArray:
@@ -53,6 +54,7 @@ def getType(card):
 
 
 def getSubtype(card):
+    """Get the card subtype."""
     logging.info('Getting the Subtype of the card.')
     if card[u'subtypes'] == None:
         subtype = ''
@@ -67,9 +69,8 @@ def getSubtype(card):
 
 
 def getCardInfo(card):
+    """For each card in the set, get the Color and full Type."""
     logging.info('Fetching the card data.')
-    # For each card in the set, get the Collector Number, Name,
-    # ... Rarity, Color and Type.
     # Get the card Type.
     ctype = getType(card)
     # Get the Supertype.
@@ -78,18 +79,14 @@ def getCardInfo(card):
     subtype = getSubtype(card)
     # Get the Color identity.
     color = getColor(card, ctype)
-    # Get the Collector Number.
-    num = card[u'number']
-    # Get the Rarity.
-    rar = card['rarity'][0].upper()
-    return num, rar, color, supertype, ctype, subtype
+    return color, supertype, ctype, subtype
 
 
 def getPrice(setID, card):
+    """This function provides price information, returning the
+    current median price.
+    """
     logging.info('Fetching the card price.')
-    # This function provides price information, returning the
-    # ... current median price.
-    # It is a separate function so it can be called independently.
     price = "Error"
     if card[u'name'] in ['Plains', 'Island', 'Swamp', 'Mountain', 'Forest']:
         price = '0.10'
@@ -103,15 +100,14 @@ def getPrice(setID, card):
 
 
 def createData(setID, cardCount, updateType):
-    # mtgapi.com is the main data source, providing set AND price information.
-    # This API limits returns to 20 items per page. Use the cardCount (set size)
-    # ... to determine the number of pages needed to fully display the set.
-    # ... Page starts at 1.
-    numPages = int(math.ceil(float(cardCount) / 20))
-    print numPages
+    """mtgapi.com is the main data source, providing set AND price information.
+    This API limits returns to 20 items per page. Use the cardCount (set size)
+    to determine the number of pages needed to fully display the set.
+    Page starts at 1.
+    """
     # Now, update the Cards, Prices or Both, depending on user selection.
     cardList = list()
-    for i in range(1, numPages+1):
+    for i in range(1, int(math.ceil(float(cardCount) / 20)) + 1):
         url = "http://api.mtgapi.com/v2/cards?set=" + setID + "&page=" + str(i)
         req = requests.get(url)
         logging.info('Getting data from page '+str(i))
@@ -119,47 +115,51 @@ def createData(setID, cardCount, updateType):
         for i in range(0, len(data["cards"])):
             card = data["cards"][i]
             # Get the name of the card.
-            name = card['name']
-            logging.info('CARD NAME: '+name)
-            #print name
+            logging.info('CARD NAME: '+card['name'])
+            color, supertype, ctype, subtype = getCardInfo(card)
             if updateType == 'CARDS':
                 logging.info('Starting the update of the '+updateType+'.')
-                num, rar, color, supertype, ctype, subtype = getCardInfo(card)
-                cardList.append(num+'|'+name+'|'+rar+'|'+color+'|'
-                                +supertype+ctype+subtype)
+                cardList.append(card[u'number']+'|'+card['name']+'|'+
+                                card['rarity'][0].upper()+'|'+color+'|'+
+                                supertype+ctype+subtype)
                 logging.info('Finished updating the '+updateType+'.')
             elif updateType == 'PRICES':
                 logging.info('Starting the update of the '+updateType+'.')
                 price = getPrice(setID, card)
-                cardList.append(name+'|$%s' %price)
+                cardList.append(card['name']+'|$%s' %price)
                 logging.info('Finished updating the '+updateType+'.')
             elif updateType == 'BOTH':
                 logging.info('Starting the FULL update.')
-                num, rar, color, supertype, ctype, subtype = getCardInfo(card)
                 price = getPrice(setID, card)
-                cardList.append(num+'|'+name+'|'+rar+'|'+color+'|'
-                                +supertype+ctype+subtype+'|$%s' %price)
+                cardList.append(card[u'number']+'|'+card['name']+'|'+
+                                card['rarity'][0].upper()+'|'+color+'|'+
+                                supertype+ctype+subtype+'|$%s' %price)
                 logging.info('Finished the FULL update.')
             else:
                 logging.warning('ERROR: Something very bad has happened.')
                 return "ERROR: Something very bad has happened."
     logging.info('Returning the dataset.')
-    f = open(setID+'_cardlist.csv', 'w')
-    for x in cardList:
-        f.write(x.encode('UTF8'))
-        f.write('\n')
-    f.close()
     return [x.encode('UTF8') for x in cardList]
 
 
+def output(setID, data):
+    """Write the data to a file."""
+    f = open(setID+'_cardlist.csv', 'w')
+    for x in data:
+        f.write(x)
+        f.write('\n')
+    f.close()
+
+
 def getCardCount(setID):
-    # mtgapi.com provides the set size information.
+    """mtgapi.com provides the set size information."""
     mtgapiURL = "http://api.mtgapi.com/v2/sets?code=" + setID
     cardCount = requests.get(mtgapiURL).json()[u'sets'][0][u'cardCount']
     return cardCount
 
 
 def parseStuff():
+    """Argument parser."""
     parser = argparse.ArgumentParser(
         description='Create or update MTG card inventories.')
     parser.add_argument(
@@ -176,6 +176,11 @@ def parseStuff():
 
 ### Main ###
 def main():
+    """Main function.
+    Sets the logging level. Parses the arguments.
+    Gets the set size and then the card data.
+    Finally, outputs the data to a local file.
+    """
     # Set logging level.
     logging.basicConfig(
         filename='mtg.log',
@@ -194,7 +199,10 @@ def main():
     logging.info('Creating dataset for '+setID+'. There are '
                  +str(cardCount)+' cards in the set.')
     logging.info('Updating '+updateType+'.')
-    createData(setID, cardCount, updateType)
+    dataset = createData(setID, cardCount, updateType)
+
+    # Dump dataset to a file.
+    output(setID, dataset)
 
     logging.info('Complete.')
 
