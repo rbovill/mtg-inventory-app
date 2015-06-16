@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import requests
 import argparse
 import math
@@ -9,12 +10,12 @@ import logging
 def getColor(card, ctype):
     logging.info('Getting the Color of the card.')
     # Get the color identity of the card.
-    if u'colors' in card:
+    if card[u'colors'] != None:
         numColors = len(card[u'colors'])
         if numColors > 1:
             color = ''
             for i in card[u'colors']:
-                if i == "blue":
+                if i == "Blue":
                     i = "U"
                 color += i[0].capitalize()+'/'
             color = color[:-1]
@@ -28,101 +29,38 @@ def getColor(card, ctype):
         color = ctype
     # Special Case: Some cards are simply colorless, i.e. Eldrazi and Ugin.
     else:
-        color = ''
+        color = 'Colorless'
     return color
 
 def getSupertype(card):
     logging.info('Getting the Supertype of the card.')
-    if u'supertypes' in card:
-        supertype = card[u'supertypes'][0].capitalize()+' '
-    else:
+    if card[u'supertypes'] == None:
         supertype = ''
+    else:
+        supertype = card[u'supertypes'][0].capitalize()+' '
     return supertype
 
 def getType(card):
     logging.info('Getting the Type of the card.')
-    # Get the Type of the card.  This is only really needed for
-    # Artifact Creatures and Enchantment Creatures.
+    # Get the Type of the card.
     typeArray = [x.capitalize() for x in card[u'types']]
-    arrayLen = len(typeArray)
-    # The Type array is alphabetized (why?!) at source.
-    # Parse array into proper order.
-    if arrayLen > 1:
-        ctype = orderTypeArray(typeArray)
-    else:
-        ctype = card[u'types'][0].capitalize()
-    #print ctype
-    return ctype
-
-def orderTypeArray(array):
-    logging.info('Setting the proper Type order.')
-    art = enc = cre = 'TEMP'
-    for i in array:
-        if i == 'Artifact':
-            art = i
-        elif i == 'Enchantment':
-            enc = i
-        elif i == 'Creature':
-            cre = i
-        else:
-            print "ERROR: Cannot determine card type."
-    orderedArray = [enc, art, cre]
-    orderedArray.remove('TEMP') # Filter out any empty elements.
-    return orderedArray[0]+' '+orderedArray[1]
+    ctype = ""
+    for i in typeArray:
+        ctype += i+' '
+    return ctype.rstrip()
 
 def getSubtype(card):
     logging.info('Getting the Subtype of the card.')
-    subtypeArray = [x.capitalize() for x in card[u'subtypes']]
-    #print subtypeArray
-    arrayLen = len(subtypeArray)
-    # Subtype array is alphabetized (why?!) at source.
-    # Parse array into proper order.
-    if arrayLen > 1:
-        subtype = orderSubtypeArray(subtypeArray)
+    if card[u'subtypes'] == None:
+        subtype = ''
     else:
-        subtype = " - %s" %subtypeArray[0]
-    #print subtype
+        subtypeArray = [x.capitalize() for x in card[u'subtypes']]
+        #print subtypeArray
+        subtype = ""
+        for i in subtypeArray:
+            subtype += i+' '
+        subtype = ' '+u'—'+' '+subtype.rstrip()
     return subtype
-
-def orderSubtypeArray(array):
-    logging.info('Setting the proper Subtype order.')
-    highRaceArray = ['Plant', 'Zombie']
-    raceArray = ['Angel', 'Ape', 'Bat', 'Bird', 'Crocodile', 'Demon', 'Efreet', \
-            'Elemental', 'Elk', 'Elephant', 'Elemental', 'Goblin', \
-            'Hound', 'Human', 'Hydra', 'Insect', \
-            'Orc', 'Shapeshifter', 'Spirit', 'Treefolk', 'Wall', \
-            ]
-    classArray = ['Advisor', 'Alchemist', 'Ally', 'Archer', 'Artificer', 'Assassin', \
-            'Barbarian', 'Berserker', 'Bodyguard', 'Cleric', 'Coward', 'Druid', \
-            'Flagbearer', 'Guardian', 'Hero', 'Knight', 'Lord', 'Mercenary', \
-            'Minion', 'Monk', 'Mystic', 'Ninja', 'Nomad', 'Pirate', 'Rebel', \
-            'Rigger', 'Rogue', 'Samurai', 'Scout', 'Shaman', 'Soldier', \
-            'Spellshaper', 'Townsfolk', 'Warrior', 'Wizard']
-    flag = False
-    for i in array:
-        if i in highRaceArray:
-            prime = i
-        elif i in raceArray:
-            crace = i
-        elif i in classArray:
-            cclass = i
-        else:
-            flag = True
-    if flag:
-        orderedArray = array
-    else:
-        if ('prime' in locals()) and ('crace' in locals()):
-            first = prime
-            second = crace
-        elif ('prime' in locals()) and ('cclass' in locals()):
-            first = prime
-            second = cclass
-        else:
-            first = crace
-            second = cclass
-        orderedArray = [first, second]
-    #print orderedArray
-    return " - %s" %orderedArray[0]+' %s' %orderedArray[1]
 
 def getCardInfo(setID, card):
     logging.info('Fetching the card data.')
@@ -130,21 +68,17 @@ def getCardInfo(setID, card):
     # ... Rarity, Color and Type.
     # Get the card Type.
     ctype = getType(card)
-    # Get the Supertype of the card.
+    # Get the Supertype.
     supertype = getSupertype(card)
-    # Get the Subtype of the card.
-    if u'subtypes' in card:
-        subtype = getSubtype(card)
-    else:
-        subtype = ''
-    # Get the Color identity of the card.
+    # Get the Subtype.
+    subtype = getSubtype(card)
+    # Get the Color identity.
     color = getColor(card, ctype)
-    # Get the Collector Number and Rarity.
-    for x in card[u'editions']:
-        if x['set_id'] == setID:
-            num = x['number']
-            rar = x['rarity'][0].upper()
-            return num, rar, color, supertype, ctype, subtype
+    # Get the Collector Number.
+    num = card[u'number']
+    # Get the Rarity.
+    rar = card['rarity'][0].upper()
+    return num, rar, color, supertype, ctype, subtype
 
 def getPrice(setID, card):
     logging.info('Fetching the card price.')
@@ -178,16 +112,17 @@ def createData(setID, cardCount, updateType):
     # This API limits returns to 100 items per page.  Use the cardCount (set size)
     # ... to determine the number of pages needed to fully display the set.
     # ... Page starts at 0.
-    numPages = int(math.ceil(float(cardCount) / 100))
+    numPages = int(math.ceil(float(cardCount) / 20))
+    print numPages
     # Now, update the Cards, Prices or Both, depending on user selection.
     cardList = list()
-    for i in range(0, numPages):
-        url = "https://api.deckbrew.com/mtg/cards?set=" + setID + "&page=" + str(i)
+    for i in range(1, numPages+1):
+        url = "http://api.mtgapi.com/v2/cards?set=" + setID + "&page=" + str(i)
         req = requests.get(url)
         logging.info('Getting data from page %s' %i)
         data = req.json()
-        for i in range(0, len(data)):
-            card = data[i]
+        for i in range(0, len(data["cards"])):
+            card = data["cards"][i]
             # Get the name of the card.
             name = card['name']
             logging.info('CARD NAME: '+name)
@@ -212,8 +147,12 @@ def createData(setID, cardCount, updateType):
                 logging.warning('ERROR: Something very bad has happened.')
                 return "ERROR: Something very bad has happened."
     logging.info('Returning the dataset.')
+    f = open(setID+'_cardlist.csv', 'w')
+    for x in cardList:
+        f.write(x.encode('UTF8'))
+        f.write('\n')
+    f.close()
     return [x.encode('UTF8') for x in cardList]
-
 
 def getCardCount(setID):
     # mtgapi.com provides the set size information.
@@ -243,12 +182,12 @@ def main():
     args = parseStuff()
     setID = args.setID.upper()
     updateType = args.updateType.upper()
-    logging.info('Updating '+updateType)
     # Get set size.
     cardCount = getCardCount(setID)
 
     # Create data.
-    logging.info('Creating dataset.')
+    logging.info('Creating dataset for '+setID+'. There are '+str(cardCount)+' cards in the set.')
+    logging.info('Updating '+updateType+'.')
     createData(setID, cardCount, updateType)
 
     logging.info('Complete.')
