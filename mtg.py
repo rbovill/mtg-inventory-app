@@ -161,21 +161,31 @@ def getCardCount(setID):
 def parseStuff():
     """Argument parser."""
     parser = argparse.ArgumentParser(
-        description='Create or update MTG card inventories.')
-    parser.add_argument(
-        '-s', '--set', metavar='SET', dest='setID', required=True,
-        help='''REQUIRED: Which MtG SET do you want to update?
-        Please provide the unique, three-digit identifier.''')
-    parser.add_argument(
-        '-u', '--update', metavar='UPDATE', dest='updateType',
-        choices=['cards', 'prices', 'both'], default='prices',
-        help='Do you want to update the CARDS, PRICES or BOTH?')
+                        description='Create or update MTG card inventories.')
+                        parser.add_argument(
+                            '-s',
+                            '--set',
+                            metavar='SET',
+                            dest='setID',
+                            required=True,
+                            help='''REQUIRED: Which MtG SET do you want to update?
+                                    Please provide the unique, three-digit identifier.''')
+                        parser.add_argument(
+                            '-u',
+                            '--update',
+                            metavar='UPDATE',
+                            dest='updateType',
+                            choices=['cards',
+                                     'prices',
+                                     'both'],
+                                     default='prices',
+                                     help='Do you want to update the CARDS, PRICES or BOTH?')
     args = parser.parse_args()
     return args
 
 
 ### Main ###
-def main():
+if __name__ == '__main__':
     """Main function.
     Sets the logging level. Parses the arguments.
     Gets the set size and then the card data.
@@ -205,6 +215,3 @@ def main():
     output(setID, dataset)
 
     logging.info('Complete.')
-
-if __name__ == '__main__':
-    main()
